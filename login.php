@@ -1,147 +1,87 @@
-<?php include_once 'admin/include/init.php';
-    // session_start();
+<?php include_once 'include/init.php';?>
+<?php
+ if (isset($_POST['login'])) {
+     $input_email = clean($_POST['input_email']);
+     $input_password= clean($_POST['input_password']);
+     $logged = Users::user_account_login($input_email, $input_password);
+
+     if($logged) {
+         $session->login($logged);
+         redirect_to("dashboard.php");
+     } else {
+         redirect_to("login.php");
+         $session->message("
+            <div class=\"alert alert-danger alert-dismissible fade show\" role=\"alert\">
+              <strong><i class='mdi mdi-alert'></i></strong>  Invalid email or password. Please try again
+              <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">
+                <span aria-hidden=\"true\">&times;</span>
+              </button>
+            </div>");
+     }
+ }
 ?>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
 
-    <html>
-        <head>
-            <!-- Bootstrap core CSS -->
-            <link href="css/bootstrap.min.css" rel="stylesheet">
+    <title>Administrator Login Your Account</title>
 
-            <!-- Custom styles for this template -->
-            <link href="css/signin.css" rel="stylesheet">
-            <link rel="stylesheet" href="style.css">
-        
-            <style>
-                 .loader-container {
-            width: 100vw;
-            height: 110vh;
-            background-color: black;
-            position: fixed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
+    <!-- Bootstrap core CSS -->
+    <link href="../css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="../css/signin.css" rel="stylesheet">
+    <style>
+        body {
+            background: url("../images/wed.jpg");
+            /* background-color: black; */
+            background-size: 100%;
         }
-                .user{
-                    background: rgba( 0, 0, 0, 0.65 );
-                /* box-shadow: 0 8px 32px 0 rgba( 31, 38, 135, 0.37 ); */
-                /* backdrop-filter: blur( 4px ); */
-                /* -webkit-backdrop-filter: blur( 4px ); */
-                /* border-radius: 10px; */
-                /* border: 1px solid rgba( 255, 255, 255, 0.18 ); */
-                }
+        
+        .form-signin {
+            background: rgba(255, 255,255, 0.4);
+        }
+    </style>
+</head>
 
-                .img
-                {
-                    background-image:url('images/e1.jpg');
-                    /* background-repeat:no-repeat;  */
-                    background-size: 2000px 950px;
-                    /* background-size:1911px; */
-                    /* margin-right:30px; */
-                } 
-            </style>
+<body class="text-center">
+<form class="form-signin" action="" method="post">
+<a href="index.php"><img class="mb-4" src="../images/logo/logo4.png" width="190" ></a>
+    <h5 class="h5 mb-3 font-weight-normal" style="color:#222">Login As Administrator</h5>
+    <?php
+        if ($session->message()) {
+            echo $session->message();
+        }
+    ?>
+    <label for="inputEmail" class="sr-only">Email address</label>
+    <input type="text" id="inputEmail" name="input_email" class="form-control" placeholder="Email Address" required autofocus>
 
-            <script>
-                function validation()
-                    {
-                        var result=true;
-                        if(lblusername.innerHTML!="" || lblpassword.innerHTML!="" || lblemailadd.innerHTML!="" || lblcontactno.innerHTML!="" )
-                            {
-                                result=false;
-                            }
-                        return result;
-                    }
-        </script>
+    <label for="inputPassword" class="sr-only">Password</label>
+    <input type="password" id="inputPassword" name="input_password" class="form-control" placeholder="Password" required>
 
-            <?php include("dataclass.php");?>
-            <?php 
-                $dc=new dataclass();
-                $query="";
-                $result="";
-                $regid="";
-                $username="";
-                $password="";
-                $msg="";
-           ?>
-                     
-            <?php 
-                if(isset($_POST['btnlogin']))
-                    {
-                        $username=$_POST['username'];
-                        $password=$_POST['password'];
-                        $query="select regid,username,password,usertype from register where username='$username'";
-                        $rw=$dc->getrecord($query);
-                        if($rw)
-                            {
-                                if($password==$rw['password'])
-                                    {
-                                        $_SESSION['login']='yes';
-                                        $_SESSION['regid']=$rw['regid'];
-                                        $_SESSION['username']=$rw['username'];
-                                        header("location:index.php");
-                                    }
-                                else
-                                    {
-                                        $msg="Invalid Password";
-                                    }
-                            }
-                        else
-                            {
-                                $msg="Invalid Username";
-                            }
-                    }
+    <button class="btn btn-md btn-danger btn-block" type="submit" name="login">Log In</button>
+<br><br>
+    <div class="text-center" style="color:#222">
+        <!-- <h5><a class="small  text-dark" href="forgetpwd.php">Forgot Password?</a></h5> -->
+        <h5><a class="small  text-dark" href="../login.php">GO TO USER</a></h5>
+    </div> 
 
-                if(isset($_POST['btncancel']))
-                    {
-                        header('location:mainhome.php');
-                    }
-            ?>
-            <?php
+    <p class="mt-5 mb-3 text-muted">&copy; <?php echo date('D-M-Y')?></p>
 
-            ?>
-
-        </head>
-
-        <body class="text-light img" stylesheet="height:60;">
-        <div class="loader-container">
-        <img src="images/loader1.gif" alt="img not found   ">
-    </div>
-            <form name="frmlogin" action="" method="post" class="user" onsubmit="return validation()">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-12"></div>
-                        <!-- <div class="col-md-12 p-3" > -->
-                        <div class="col-sm-12 mb-4 p-4">
-                            <div class="row">
-                                <div class="col">
-                                    <h2 class="text-cente text-light">USER LOGIN</h2>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label>USERNAME</label>
-                                    <!-- <input type="text" class="form-control" name="username" placeholder="Enter Username" value=""> -->
-                                    <input type="text" value="<?php echo $username; ?>" name="username" class="form-control" placeholder="Enter Username" onchange='onlyalpha(this,lblusername)' required>
-                                    <label id="lblusername"></label>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label>PASSWORD</label>
-                                    <input type="password" class="form-control" name="password" placeholder="Enter Password" value="" onchange='checklength(this,lblpassword,3,8)' required>
-                                    <label id="lblpassword"></label>
-                                </div>
-                            </div>
-                            
-                            <div class="row mt-3">
-                                <div class="col-md-12">
-                                    <input type="submit" class="btn btn-primary" name="btnlogin" value="Login">
-                                    <input type="submit" class="btn btn-danger" name="btncancel" value="Cancel">
-                                </div>
-                            </div>
-
-<!-- ==================================== -->
+</form>
+<script src="js/jquery-3.2.1.slim.min.js"></script>
+<script src="js/jquery.min.js"></script>
+<script src="js/popper.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script>
+    $('.your-checkbox').prop('indeterminate', true);
+</script>
+</body>
+</html>
 
 
 
@@ -149,43 +89,4 @@
 
 
 
-<!-- ======================================== -->
-
-
-
-                            <div class="row mt-3 text-light">
-                                <?php echo $msg?>
-                            </div>
-                        </div>
-                    </div>
-                 <br>
-
-                    <div class="text-center">
-                        <!-- <h4><a class="small  text-light" href="forgotpassword.php">Forgot Password?</a></h4> -->
-                        <h4><a class="small  text-light" href="reg.php">Don't have an account? Sign up.</a></h4>
-                        <h5><a class="small  text-light" href="passwordchange.php">Change Password</a></h5>
-                    </div> 
-                </div>
-            </form>
-        </body>
-
-
-                    
-
-
-
-         <script src="js/jquery-3.2.1.slim.min.js"></script> 
-        <script src="js/jquery.min.js"></script>
-            <script src="js/popper.min.js"></script>
-            <script src="js/bootstrap.min.js"></script>
-            <script>
-                $('.your-checkbox').prop('indeterminate', true); 
-        </script>
-        <script  src="validationfunction.js"></script>
-        <script>
-        $(window).on("load", function () {
-            $(".loader-container").fadeOut(2000);
-        });
-    </script>
-
-    </html>
+    

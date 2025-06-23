@@ -1,573 +1,611 @@
-<?php 
-session_start();
-if(!isset($_SESSION['login']))
-{
-    $_SESSION['login']='no';
-}
-include 'admin/include/init.php';
-    
-?>
+<?php include 'include/init.php'; ?>
 <?php
-    $count = 0;
-    $error = '';
-    $user_firstname = $user_lastname = $user_password = $user_email = $wedding_date = '';
-
-    $account_details = new Account_Details();
-    $accounts = new Accounts();
-    $booking = new Booking();
-    // $category = Category::find_all();
-    // $blogEvent = EventWedding::getEventBlogs();
-
-    if (isset($_POST['register'])) {
-
-        $user_firstname = clean($_POST['user_firstname']);
-        $user_lastname = clean($_POST['user_lastname']);
-        $user_email = clean($_POST['user_email']);
-        $user_phone = clean($_POST['user_phone']);
-        $wedding_date = clean($_POST['wedding_date']);
-
-        $checkdate = $booking->check_wedding_date($wedding_date);
-
-        if ($checkdate) {
-            redirect_to("index.php");
-            $session->message("
-            <div class=\"alert alert-warning alert-dismissible fade show\" role=\"alert\">
-              <strong><i class='mdi mdi-alert'></i></strong>  The wedding you enter is already booked. Please Try another set of date!
-              <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">
-                <span aria-hidden=\"true\">&times;</span>
-              </button>
-            </div>");
-            die();
-        }
-
-        if (empty($user_firstname) ||
-            empty($user_phone) ||
-            empty($user_email) ||
-            empty($user_lastname) ||
-            empty($wedding_date)) {
-            redirect_to("index.php");
-            $session->message("
-            <div class=\"alert alert-warning alert-dismissible fade show\" role=\"alert\">
-              <strong><i class='mdi mdi-alert'></i></strong>  Please Fill up all the fields.
-              <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">
-                <span aria-hidden=\"true\">&times;</span>
-              </button>
-            </div>");
-            die();
-        }
-
-        if (!filter_var($user_email, FILTER_VALIDATE_EMAIL)){
-            redirect_to("index.php");
-            $session->message("
-            <div class=\"alert alert-warning alert-dismissible fade show\" role=\"alert\">
-              <strong><i class='mdi mdi-alert'></i></strong>  Incorrect email format.
-              <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">
-                <span aria-hidden=\"true\">&times;</span>
-              </button>
-            </div>");
-            die();
-
-        }
-
-        $check_email = $accounts->email_exists($user_email);
-
-        if ($check_email) {
-            redirect_to("index.php");
-            $session->message("
-            <div class=\"alert alert-warning alert-dismissible fade show\" role=\"alert\">
-              <strong><i class='mdi mdi-alert'></i></strong>  Email is already Exists.
-              <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">
-                <span aria-hidden=\"true\">&times;</span>
-              </button>
-            </div>");
-            die();
-        } else {
-            if ($error == '') {
-                $count = $count + 1;
-                $account_details->firstname = $user_firstname;
-                $account_details->lastname = $user_lastname;
-                $account_details->status = 'pending';
-                $account_details->datetime_created  = date("y-m-d h:m:i");
-                $account_details->phone= $user_phone;
-                if ($account_details->save()) {
-                    $account_details->user_id = mysqli_insert_id($db->connection);
-
-                    if($account_details->update()) {
-                        $accounts->user_id = $account_details->user_id;
-                        $accounts->user_email= $user_email;
-
-
-                         if($accounts->save()) {
-                             $booking->user_id = $accounts->user_id;
-                             $booking->user_email = $user_email;
-                             $booking->wedding_date =  $wedding_date;
-                             $booking->save();
-                             redirect_to("thank_you.php");
-                         }
-                    }
-                }
-            }
-        }
+    if (!isset($_SESSION['id'])) {
+        redirect_to("../");
     }
 ?>
 <!doctype html>
 <html lang="en">
 <head>
-
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>BANDHAN</title>
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Roboto" rel="stylesheet">
+    <title>Dashboard - Administrator</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/dataTables.bootstrap4.min.css" rel="stylesheet">
+<!--    <link href="css/bootstrap.css" rel="stylesheet">-->
     <link rel="stylesheet" type="text/css"
           href="https://cdn.materialdesignicons.com/2.1.19/css/materialdesignicons.min.css">
-    <link rel="stylesheet" href="css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/bootstrap-datepicker.css">
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        .loader-container {
-            width: 100vw;
-            height: 110vh;
-            background-color: black;
-            position: fixed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
-        }
-
-        .alert {
-            font-size: 12px;
-        }
-        .error {
-            background-color: #F2DEDE;
-        }
-        .alert.alert-danger.text-center {
-            font-size: 16px;
-        }
-        .mdi.mdi-alert-circle.mr-3 {
-            font-size: 16px;
-        }
-
-         .bgact{
-                 background: rgba(255, 255,255, 0.4); 
-                background: rgb(14 14 14 / 49%);
-                padding: 15px;
-                width:100%;
-                
-        }
-        
-        * {box-sizing: border-box;}
-            body {
-                /* font-family: Verdana, sans-serif; */
-                font-family: "Open Sans", "Roboto", sans-serif !important;}
-            .mySlides {display: none;}
-            img {vertical-align: middle;}
-
-            /* Slideshow container */
-            .slideshow-container {
-            /* max-width: 1000px; */
-            height:800px;
-            position: relative;
-            margin: auto;
-            }
-
-            /* Caption text */
-            .text {
-            color: #f2f2f2;
-            font-size: 15px;
-            padding: 8px 12px;
-            position: absolute;
-            bottom: 8px;
-            width: 100%;
-            text-align: center;
-            }
-
-            /* Number text (1/3 etc) */
-            .numbertext {
-            color: #f2f2f2;
-            font-size: 12px;
-            padding: 8px 12px;
-            position: absolute;
-            top: 0;
-            }
-
-            /* The dots/bullets/indicators */
-            .dot {
-            height: 15px;
-            width: 15px;
-            margin: 0 2px;
-            background-color: #bbb;
-            border-radius: 50%;
-            display: inline-block;
-            transition: background-color 0.6s ease;
-            }
-
-            .active {
-            background-color: #717171;
-            }
-
-            /* Fading animation */
-            .fade {
-            animation-name: fade;
-            animation-duration: 7s;
-            }
-
-            @keyframes fade {
-            from {opacity: .9} 
-            to {opacity: 1}
-            }
-
-            /* On smaller screens, decrease text size */
-            @media only screen and (max-width: 300px) {
-            .text {font-size: 11px}
-            }
-
-            .card-columns {
-                column-count: 4;
-                padding-right:20px;
-            }
-
-                    
-    </style>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" rel="stylesheet">
 </head>
+
 <body>
-
-<?php include 'include/nav.php'; ?>
-    <div class="loader-container">
-        <img src="images/loader1.gif" alt="img not found   ">
-    </div>
-
-
-    <div class="loader">
-        <a href="loader.php"></a>
-
+<nav class="navbar navbar-dark sticky-top p-0" style="width: 225px;">
+    <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#">
+        <img src="../images/logo/MOMMYAMBOL.png" alt="">
+    </a>
+</nav>
 
 <div class="container-fluid">
-    <div class="row justify-content-md-center">
-        <!-- <div class="hero" style="padding-left:600px;"> -->
-            <!-- <div class="row justify-content-md-center"> -->
-                <div class="col col-lg-12" style="margin-top:10px;margin-left:10px;">
-                    
-                    <?php
-                        if ($session->message()) {
-                            echo $session->message();
-                        }
-                    ?>
-               
-               <div class="slideshow-container">
-                    <div class="mySlides fade">
-                        <div class="numbertext">1 / 4</div>
-                            <img src="images/kia&sid.jpg" style="width:100%;height:850px;">
-                        </div>
-
-                    <div class="mySlides fade">
-                        <div class="numbertext">2 / 4</div>
-                            <img src="images/pic7.jpg" style="width:100%;height:850px;">
-                        
-                        </div>
-
-                    <div class="mySlides fade">
-                        <div class="numbertext">3 / 4</div>
-                            <img src="images/img1.jpg" style="width:100%;height:850px;">
-                            
-                        </div>
-
-                        <div class="mySlides fade">
-                        <div class="numbertext">4 / 4</div>
-                            <img src="images/c5.jpg" style="width:100%;height:850px;">
-                          
-                        </div>
-              </div>
-            <br>
-            <div style="text-align:center">
-                <span class="dot"></span> 
-                <span class="dot"></span> 
-                <span class="dot"></span> 
-                <span class="dot"></span> 
-            </div>
-
-
-            <!-- <div class="col col-lg-3">
-                </div> -->
-            </div>
-        </div><!-- end of hero -->
-    </div> <!-- end of row justify-content-md-center -->
-</div><!-- end of container-fluid  -->
-
-<div class="container-fluid custom-container">
     <div class="row">
-        <div class="col-lg-12">
-            <!-- <h3 class="h5 text-uppercase text-center text-muted mt-4">Wedding</h3> -->
-            <hr>
-            <h2 class="h2 text-uppercase text-center mb-4">Our Wedding Packages</h2>
-
-            <div class="container-fluid">
-    <div class="row" style="padding:10px; spacing:10px;">
-        <div class="col-md-4" style="padding:10px;">
-            <center><img src="images/classic.jpg" width="400px" height="400px" /><p></p> <h5>CLASSIC</h5> <hr>
-            <?php
-                if(isset($_SESSION['username']))
-                    {
-                        echo"<button class='btn btn-md ibtn' type='submit' onclick='location.href='package.php''> <span style='margin-left: 10px;'> More Info </span></button></center>";
-                    }
-                    else
-                    {
-                        echo"<button class='btn btn-md ibtn' type='submit' onclick='location.href='login.php'> <span style='margin-left: 10px;'> More Info </span></button></center>";
-                    }
-                    ?>
-
-        </div>
-        <div class="col-md-4" style="padding:20px;">
-            <center><img src="images/ele.jpg" width="400px" height="400px" /><p></p> <h5>ELEGANT</h5><hr>
-                <button class="btn btn-md ibtn" onclick="location.href='package.php'">
-                    <span style="margin-left: 10px;">
-                        More Info
-                    </span>
-                </button></center>
-        </div>
-        <div class="col-md-4" style="padding:20px;">
-        <center><img src="images/premier.jpeg" width="400px" height="400px" /><p></p> <h5>PREMIER</h5> <hr>
-                <button class="btn btn-md ibtn" onclick="location.href='package.php'">
-                    <span style="margin-left: 10px;">
-                        More Info
-                    </span>
-                </button></center>
-        </div>
-        <div class="col-md-6" style="padding:20px;">
-        <center><img src="images/timeless.jpg" width="400px" height="400px" /><p></p> <h5>TIMELESS-GOLD</h5> <hr>
-                <button class="btn btn-md ibtn" onclick="location.href='package.php'">
-                    <span style="margin-left: 10px;">
-                        More Info
-                    </span>
-                </button></center>
-        </div>
-        <div class="col-md-6" style="padding:20px;">
-        <center><img src="images/elite.jpg" width="400px" height="400px" /><p></p> <h5>ELITE</h5> <hr>
-                <button class="btn btn-md ibtn" onclick="location.href='package.php'">
-                    <span style="margin-left: 10px;">
-                        More Info
-                    </span>
-                </button></center>
-        </div>
-    </div>
-
-
-        </div><!-- end of col-lg-12 -->
-    </div><!-- end of row -->
-</div><!-- end of container-fluid -->
-
-<div class="container">
-    <div class="row">
-        <div class="col-lg-12">
-            <h2 class="h2 text-uppercase text-center mb-3">THE LATEST INSPIRATION</h2>
-            <h6 class="h6 text-uppercase text-center text-muted mb-3">Discover the best ideas, tips and articles to inspire your wedding.</h6>
-            <br><br><br>
-            <div class="container">
-               <div class="row" style="padding:0px;">
-               <div class="col-md-4" style="padding:0px;">
-                        <!-- <p hight=15px;><h5>CLASSIC</h5></p> -->
-                            <img src="admin/upload/events/kv1.jpg" width="400px" height="400px" onclick="location.href='real-weddings.php'"> <hr><br>
-                                <!-- <button class="btn btn-md ibtn" type="submit" > -->
-                                    <!-- <span style="margin-left: 10px;">
-                                        More Info
-                                    </span>
-                                </button> -->
-                    </div>
-
-                    <div class="col-md-4" style="padding:0px;">
-                        <!-- <p hight=15px;><h5>CLASSIC</h5></p> -->
-                            <img src="admin/upload/events/sk1.jpg" width="400px" height="400px" onclick="location.href='real-weddings.php'"> <hr><br>
-                                <!-- <button class="btn btn-md ibtn" type="submit" > -->
-                                    <!-- <span style="margin-left: 10px;">
-                                        More Info
-                                    </span>
-                                </button> -->
-                    </div>
-
-                    <div class="col-md-4" style="padding:0px;">
-                        <!-- <p hight=15px;><h5>CLASSIC</h5></p> -->
-                            <img src="images/cou.jpg" width="400px" height="400px" onclick="location.href='real-weddings.php'"> <hr><br>
-                                <!-- <button class="btn btn-md ibtn" type="submit" > -->
-                                    <!-- <span style="margin-left: 10px;">
-                                        More Info
-                                    </span>
-                                </button> -->
-                    </div>
-
-                    <div class="col-md-4" style="padding:0px;">
-                        <!-- <p hight=15px;><h5>CLASSIC</h5></p> -->
-                            <img src="admin/upload/events/ab1.jpg" width="400px" height="400px" onclick="location.href='real-weddings.php'"> <hr><br>
-                                <!-- <button class="btn btn-md ibtn" type="submit" > -->
-                                    <!-- <span style="margin-left: 10px;">
-                                        More Info
-                                    </span>
-                                </button> -->
-                    </div>
-
-                    <div class="col-md-4" style="padding:0px;">
-                        <!-- <p hight=15px;><h5>CLASSIC</h5></p> -->
-                            <img src="admin/upload/events/wdbnt.jpg" width="400px" height="400px" onclick="location.href='real-weddings.php'"> <hr><br>
-                                <!-- <button class="btn btn-md ibtn" type="submit" > -->
-                                    <!-- <span style="margin-left: 10px;">
-                                        More Info
-                                    </span>
-                                </button> -->
-                    </div>
-
-                    <div class="col-md-4" style="padding:0px;">
-                        <!-- <p hight=15px;><h5>CLASSIC</h5></p> -->
-                            <img src="admin/upload/events/c3.jpg" width="400px" height="400px" onclick="location.href='real-weddings.php'"> <hr><br>
-                                <!-- <button class="btn btn-md ibtn" type="submit" > -->
-                                    <!-- <span style="margin-left: 10px;">
-                                        More Info
-                                    </span>
-                                </button> -->
-                    </div>
-                    
-                    
-                    
-                </div>
-            </div>
-            <a href="real-weddings.php" class="btn btn-lg btn-block btn-explore">EXPLORE MORE INSPIRATION</a>
-            </div>
-        </div><!-- end of col-lg-12 -->
-    </div><!-- end of row -->
-</div><!-- end of container -->
-
-
-<!-- <div class="container-fluid" style="width: 100%;background: white;margin-top: 50px;padding-bottom: 20px;">
-    <div class="row">
-        <div class="col-lg-6">
-            <div class="row img-control">
-                <div class="col-md-1"></div>
-                <div class="col-md-2">
-                    <img src="DESIGN/checklist-ea253352239433deb24f2ed8ae110aac1840ff8fa5df43967027e880b5f5385b.svg"
-                         alt="">
-                    <div class="font-custom">CheckList</div>
-                </div>
-                <div class="col-md-2">
-                    <img src="DESIGN/seating-chart-084bbdaabe84a638edf344224d7a92b1bc792db53c5fcf7ab16fcd5a6109ff79.svg"
-                         alt="">
-                    <div class="font-custom">Seating Chart</div>
-                </div>
-                <div class="col-md-2">
-                    <img src="DESIGN/guest-list-eaaf9277c60be7449e41e2f72f358ae3c94c1b31726b894e064498a9536cac9a.svg"
-                         alt="">
-                    <div class="font-custom">Guess List</div>
-                </div>
-                <div class="col-md-2">
-                    <img src="DESIGN/budget-6eca6d3898f15dd5682ce3664d8d9ff9bdd271db03857ba8a99e90b9181db46c.svg"
-                         alt="">
-                    <div class="font-custom">Budget</div>
-                </div>
-                <div class="col-md-2">
-                    <img src="DESIGN/vendor-manager-102fbe8fdbab3e176a6d29bd05c6f26dcd35cfa0f55ff50b1bfd9e70c8fdcdda.svg"
-                         alt="">
-                    <div class="font-custom">Vendor Manager</div>
-                </div>
-
-            </div>
-                <h1 class="h1 text-center mt-4">Take the Stress Out of Planning</h1>
-                <p class="lead text-muted text-center ml-5" style="font-size: 14px;">Check things off your personalized to-do list all the way to your big day!</p>
-        </div>
-        <div class="col-lg-6">
-            <div class="feature">
-                <ul class="list-group rounded-0">
-                    <li class="list-group-item rounded-0 d-flex justify-content-between align-items-center ">Announcement your engagement
-                        <span class="badge badge-pill" style="font-size: 12px;font-weight: bold;color:#888;">OverDue <i class="mdi mdi-checkbox-blank-outline ml-3" ></i></span>
+        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+            <div class="sidebar-sticky">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <div class="text-center">
+                            <a href="" class="">
+                                <img src="images/img_avatar5.png" class="img-fluid rounded-circle" width="50" alt="">
+                                <div class="user-profile">Wency J. Tejada</div>
+                            </a>
+                        </div>
                     </li>
-                    <li class="list-group-item rounded-0 d-flex justify-content-between align-items-center">Plan your engagement party
-                        <span class="badge badge-pill" style="font-size: 12px;color:#888">Today <i class="mdi mdi-checkbox-blank-outline ml-3"></i></span>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="mdi mdi-view-dashboard-variant mr-3"></i>
+                            Dashboard <span class="sr-only">(current)</span>
+                        </a>
                     </li>
-                    <li class="list-group-item rounded-0 d-flex justify-content-between align-items-center">Schedule an engagement photo shoot
-                        <span class="badge badge-pill" style="font-size: 12px;color:#888">Tomorrow <i class="mdi mdi-checkbox-blank-outline ml-3"></i></span>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="mdi mdi-clipboard-text mr-3"></i>
+                            Blogs &amp; Events
+                        </a>
                     </li>
-                    <li class="list-group-item rounded-0 d-flex justify-content-between align-items-center">Set up your registry
-                        <span class="badge badge-pill" style="font-size: 12px;color:#888">May 15 <i class="mdi mdi-checkbox-blank-outline ml-3"></i></span>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="mdi mdi-account mr-3"></i>
+                            Customers
+                        </a>
                     </li>
-                    <li class="list-group-item rounded-0 d-flex justify-content-between align-items-center">Start your guest list
-                        <span class="badge badge-pill" style="font-size: 12px;color:#888">Today <i class="mdi mdi-checkbox-blank-outline ml-3"></i></span>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="mdi mdi-image-multiple mr-3"></i>
+                            Gallery
+                        </a>
                     </li>
-                    <li class="list-group-item rounded-0 d-flex justify-content-between align-items-center">Decide on your wedding
-                        <span class="badge badge-pill" style="font-size: 12px;color:#888">June 10 <i class="mdi mdi-checkbox-blank-outline ml-3"></i></span>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="mdi mdi-account-settings-variant mr-3"></i>
+                            Users
+                        </a>
                     </li>
-                    <li class="list-group-item rounded-0 d-flex justify-content-between align-items-center">Select your wedding date
-                        <span class="badge badge-pill" style="font-size: 12px;color:#888">June 20 <i class="mdi mdi-checkbox-blank-outline ml-3"></i></span>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="mdi mdi-file-chart mr-3"></i>
+                            Reports
+                        </a>
                     </li>
                 </ul>
             </div>
-        </div>
-    </div>
-</div> -->
+        </nav>
 
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10" style="margin-top: -40px;z-index: 999">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light" style="margin-left:-15px;margin-right: -15px;">
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
 
-<footer class="pt-3">
-    <div class="row">
-        <div class="col-12 col-md">
-            <div class="text-center">
-                <small class="d-block mb-3 text-muted">&copy; <?php echo date('D-M-Y')?> </small>
+                    </ul>
+                </div>
+
+                <div class="form-inline my-2 my-lg-0">
+                    <a class="nav-link" href="#"><b>Wency J. Tejada</b></a>
+                    <a class="nav-link" href="logout.php"><b>Sign Out</b></a>
+                </div>
+            </nav>
+
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                <h4 class="h4 mt-4">Post And Events Information</h4>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group mr-2">
+                        <a class="btn btn-sm btn-light" style="font-size: 12px;"><i class="mdi mdi-lead-pencil"></i> Add Post</a>
+                    </div>
+                </div>
             </div>
-        </div>
+
+            <table id="example" class="table table-striped table-bordered table-sm" cellspacing="0" width="100%">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Position</th>
+                    <th>Office</th>
+                    <th>Age</th>
+                    <th>Start date</th>
+                    <th>Salary</th>
+                </tr>
+                </thead>
+                <tfoot>
+                <tr>
+                    <th>Name</th>
+                    <th>Position</th>
+                    <th>Office</th>
+                    <th>Age</th>
+                    <th>Start date</th>
+                    <th>Salary</th>
+                </tr>
+                </tfoot>
+                <tbody>
+                <tr>
+                    <td>Tiger Nixon</td>
+                    <td>System Architect</td>
+                    <td>Edinburgh</td>
+                    <td>61</td>
+                    <td>2011/04/25</td>
+                    <td>$320,800</td>
+                </tr>
+                <tr>
+                    <td>Garrett Winters</td>
+                    <td>Accountant</td>
+                    <td>Tokyo</td>
+                    <td>63</td>
+                    <td>2011/07/25</td>
+                    <td>$170,750</td>
+                </tr>
+                <tr>
+                    <td>Ashton Cox</td>
+                    <td>Junior Technical Author</td>
+                    <td>San Francisco</td>
+                    <td>66</td>
+                    <td>2009/01/12</td>
+                    <td>$86,000</td>
+                </tr>
+                <tr>
+                    <td>Cedric Kelly</td>
+                    <td>Senior Javascript Developer</td>
+                    <td>Edinburgh</td>
+                    <td>22</td>
+                    <td>2012/03/29</td>
+                    <td>$433,060</td>
+                </tr>
+                <tr>
+                    <td>Airi Satou</td>
+                    <td>Accountant</td>
+                    <td>Tokyo</td>
+                    <td>33</td>
+                    <td>2008/11/28</td>
+                    <td>$162,700</td>
+                </tr>
+                <tr>
+                    <td>Brielle Williamson</td>
+                    <td>Integration Specialist</td>
+                    <td>New York</td>
+                    <td>61</td>
+                    <td>2012/12/02</td>
+                    <td>$372,000</td>
+                </tr>
+                <tr>
+                    <td>Herrod Chandler</td>
+                    <td>Sales Assistant</td>
+                    <td>San Francisco</td>
+                    <td>59</td>
+                    <td>2012/08/06</td>
+                    <td>$137,500</td>
+                </tr>
+                <tr>
+                    <td>Rhona Davidson</td>
+                    <td>Integration Specialist</td>
+                    <td>Tokyo</td>
+                    <td>55</td>
+                    <td>2010/10/14</td>
+                    <td>$327,900</td>
+                </tr>
+                <tr>
+                    <td>Colleen Hurst</td>
+                    <td>Javascript Developer</td>
+                    <td>San Francisco</td>
+                    <td>39</td>
+                    <td>2009/09/15</td>
+                    <td>$205,500</td>
+                </tr>
+                <tr>
+                    <td>Sonya Frost</td>
+                    <td>Software Engineer</td>
+                    <td>Edinburgh</td>
+                    <td>23</td>
+                    <td>2008/12/13</td>
+                    <td>$103,600</td>
+                </tr>
+                <tr>
+                    <td>Jena Gaines</td>
+                    <td>Office Manager</td>
+                    <td>London</td>
+                    <td>30</td>
+                    <td>2008/12/19</td>
+                    <td>$90,560</td>
+                </tr>
+                <tr>
+                    <td>Quinn Flynn</td>
+                    <td>Support Lead</td>
+                    <td>Edinburgh</td>
+                    <td>22</td>
+                    <td>2013/03/03</td>
+                    <td>$342,000</td>
+                </tr>
+                <tr>
+                    <td>Charde Marshall</td>
+                    <td>Regional Director</td>
+                    <td>San Francisco</td>
+                    <td>36</td>
+                    <td>2008/10/16</td>
+                    <td>$470,600</td>
+                </tr>
+                <tr>
+                    <td>Haley Kennedy</td>
+                    <td>Senior Marketing Designer</td>
+                    <td>London</td>
+                    <td>43</td>
+                    <td>2012/12/18</td>
+                    <td>$313,500</td>
+                </tr>
+                <tr>
+                    <td>Tatyana Fitzpatrick</td>
+                    <td>Regional Director</td>
+                    <td>London</td>
+                    <td>19</td>
+                    <td>2010/03/17</td>
+                    <td>$385,750</td>
+                </tr>
+                <tr>
+                    <td>Michael Silva</td>
+                    <td>Marketing Designer</td>
+                    <td>London</td>
+                    <td>66</td>
+                    <td>2012/11/27</td>
+                    <td>$198,500</td>
+                </tr>
+                <tr>
+                    <td>Paul Byrd</td>
+                    <td>Chief Financial Officer (CFO)</td>
+                    <td>New York</td>
+                    <td>64</td>
+                    <td>2010/06/09</td>
+                    <td>$725,000</td>
+                </tr>
+                <tr>
+                    <td>Gloria Little</td>
+                    <td>Systems Administrator</td>
+                    <td>New York</td>
+                    <td>59</td>
+                    <td>2009/04/10</td>
+                    <td>$237,500</td>
+                </tr>
+                <tr>
+                    <td>Bradley Greer</td>
+                    <td>Software Engineer</td>
+                    <td>London</td>
+                    <td>41</td>
+                    <td>2012/10/13</td>
+                    <td>$132,000</td>
+                </tr>
+                <tr>
+                    <td>Dai Rios</td>
+                    <td>Personnel Lead</td>
+                    <td>Edinburgh</td>
+                    <td>35</td>
+                    <td>2012/09/26</td>
+                    <td>$217,500</td>
+                </tr>
+                <tr>
+                    <td>Jenette Caldwell</td>
+                    <td>Development Lead</td>
+                    <td>New York</td>
+                    <td>30</td>
+                    <td>2011/09/03</td>
+                    <td>$345,000</td>
+                </tr>
+                <tr>
+                    <td>Yuri Berry</td>
+                    <td>Chief Marketing Officer (CMO)</td>
+                    <td>New York</td>
+                    <td>40</td>
+                    <td>2009/06/25</td>
+                    <td>$675,000</td>
+                </tr>
+                <tr>
+                    <td>Caesar Vance</td>
+                    <td>Pre-Sales Support</td>
+                    <td>New York</td>
+                    <td>21</td>
+                    <td>2011/12/12</td>
+                    <td>$106,450</td>
+                </tr>
+                <tr>
+                    <td>Doris Wilder</td>
+                    <td>Sales Assistant</td>
+                    <td>Sidney</td>
+                    <td>23</td>
+                    <td>2010/09/20</td>
+                    <td>$85,600</td>
+                </tr>
+                <tr>
+                    <td>Angelica Ramos</td>
+                    <td>Chief Executive Officer (CEO)</td>
+                    <td>London</td>
+                    <td>47</td>
+                    <td>2009/10/09</td>
+                    <td>$1,200,000</td>
+                </tr>
+                <tr>
+                    <td>Gavin Joyce</td>
+                    <td>Developer</td>
+                    <td>Edinburgh</td>
+                    <td>42</td>
+                    <td>2010/12/22</td>
+                    <td>$92,575</td>
+                </tr>
+                <tr>
+                    <td>Jennifer Chang</td>
+                    <td>Regional Director</td>
+                    <td>Singapore</td>
+                    <td>28</td>
+                    <td>2010/11/14</td>
+                    <td>$357,650</td>
+                </tr>
+                <tr>
+                    <td>Brenden Wagner</td>
+                    <td>Software Engineer</td>
+                    <td>San Francisco</td>
+                    <td>28</td>
+                    <td>2011/06/07</td>
+                    <td>$206,850</td>
+                </tr>
+                <tr>
+                    <td>Fiona Green</td>
+                    <td>Chief Operating Officer (COO)</td>
+                    <td>San Francisco</td>
+                    <td>48</td>
+                    <td>2010/03/11</td>
+                    <td>$850,000</td>
+                </tr>
+                <tr>
+                    <td>Shou Itou</td>
+                    <td>Regional Marketing</td>
+                    <td>Tokyo</td>
+                    <td>20</td>
+                    <td>2011/08/14</td>
+                    <td>$163,000</td>
+                </tr>
+                <tr>
+                    <td>Michelle House</td>
+                    <td>Integration Specialist</td>
+                    <td>Sidney</td>
+                    <td>37</td>
+                    <td>2011/06/02</td>
+                    <td>$95,400</td>
+                </tr>
+                <tr>
+                    <td>Suki Burks</td>
+                    <td>Developer</td>
+                    <td>London</td>
+                    <td>53</td>
+                    <td>2009/10/22</td>
+                    <td>$114,500</td>
+                </tr>
+                <tr>
+                    <td>Prescott Bartlett</td>
+                    <td>Technical Author</td>
+                    <td>London</td>
+                    <td>27</td>
+                    <td>2011/05/07</td>
+                    <td>$145,000</td>
+                </tr>
+                <tr>
+                    <td>Gavin Cortez</td>
+                    <td>Team Leader</td>
+                    <td>San Francisco</td>
+                    <td>22</td>
+                    <td>2008/10/26</td>
+                    <td>$235,500</td>
+                </tr>
+                <tr>
+                    <td>Martena Mccray</td>
+                    <td>Post-Sales support</td>
+                    <td>Edinburgh</td>
+                    <td>46</td>
+                    <td>2011/03/09</td>
+                    <td>$324,050</td>
+                </tr>
+                <tr>
+                    <td>Unity Butler</td>
+                    <td>Marketing Designer</td>
+                    <td>San Francisco</td>
+                    <td>47</td>
+                    <td>2009/12/09</td>
+                    <td>$85,675</td>
+                </tr>
+                <tr>
+                    <td>Howard Hatfield</td>
+                    <td>Office Manager</td>
+                    <td>San Francisco</td>
+                    <td>51</td>
+                    <td>2008/12/16</td>
+                    <td>$164,500</td>
+                </tr>
+                <tr>
+                    <td>Hope Fuentes</td>
+                    <td>Secretary</td>
+                    <td>San Francisco</td>
+                    <td>41</td>
+                    <td>2010/02/12</td>
+                    <td>$109,850</td>
+                </tr>
+                <tr>
+                    <td>Vivian Harrell</td>
+                    <td>Financial Controller</td>
+                    <td>San Francisco</td>
+                    <td>62</td>
+                    <td>2009/02/14</td>
+                    <td>$452,500</td>
+                </tr>
+                <tr>
+                    <td>Timothy Mooney</td>
+                    <td>Office Manager</td>
+                    <td>London</td>
+                    <td>37</td>
+                    <td>2008/12/11</td>
+                    <td>$136,200</td>
+                </tr>
+                <tr>
+                    <td>Jackson Bradshaw</td>
+                    <td>Director</td>
+                    <td>New York</td>
+                    <td>65</td>
+                    <td>2008/09/26</td>
+                    <td>$645,750</td>
+                </tr>
+                <tr>
+                    <td>Olivia Liang</td>
+                    <td>Support Engineer</td>
+                    <td>Singapore</td>
+                    <td>64</td>
+                    <td>2011/02/03</td>
+                    <td>$234,500</td>
+                </tr>
+                <tr>
+                    <td>Bruno Nash</td>
+                    <td>Software Engineer</td>
+                    <td>London</td>
+                    <td>38</td>
+                    <td>2011/05/03</td>
+                    <td>$163,500</td>
+                </tr>
+                <tr>
+                    <td>Sakura Yamamoto</td>
+                    <td>Support Engineer</td>
+                    <td>Tokyo</td>
+                    <td>37</td>
+                    <td>2009/08/19</td>
+                    <td>$139,575</td>
+                </tr>
+                <tr>
+                    <td>Thor Walton</td>
+                    <td>Developer</td>
+                    <td>New York</td>
+                    <td>61</td>
+                    <td>2013/08/11</td>
+                    <td>$98,540</td>
+                </tr>
+                <tr>
+                    <td>Finn Camacho</td>
+                    <td>Support Engineer</td>
+                    <td>San Francisco</td>
+                    <td>47</td>
+                    <td>2009/07/07</td>
+                    <td>$87,500</td>
+                </tr>
+                <tr>
+                    <td>Serge Baldwin</td>
+                    <td>Data Coordinator</td>
+                    <td>Singapore</td>
+                    <td>64</td>
+                    <td>2012/04/09</td>
+                    <td>$138,575</td>
+                </tr>
+                <tr>
+                    <td>Zenaida Frank</td>
+                    <td>Software Engineer</td>
+                    <td>New York</td>
+                    <td>63</td>
+                    <td>2010/01/04</td>
+                    <td>$125,250</td>
+                </tr>
+                <tr>
+                    <td>Zorita Serrano</td>
+                    <td>Software Engineer</td>
+                    <td>San Francisco</td>
+                    <td>56</td>
+                    <td>2012/06/01</td>
+                    <td>$115,000</td>
+                </tr>
+                <tr>
+                    <td>Jennifer Acosta</td>
+                    <td>Junior Javascript Developer</td>
+                    <td>Edinburgh</td>
+                    <td>43</td>
+                    <td>2013/02/01</td>
+                    <td>$75,650</td>
+                </tr>
+                <tr>
+                    <td>Cara Stevens</td>
+                    <td>Sales Assistant</td>
+                    <td>New York</td>
+                    <td>46</td>
+                    <td>2011/12/06</td>
+                    <td>$145,600</td>
+                </tr>
+                <tr>
+                    <td>Hermione Butler</td>
+                    <td>Regional Director</td>
+                    <td>London</td>
+                    <td>47</td>
+                    <td>2011/03/21</td>
+                    <td>$356,250</td>
+                </tr>
+                <tr>
+                    <td>Lael Greer</td>
+                    <td>Systems Administrator</td>
+                    <td>London</td>
+                    <td>21</td>
+                    <td>2009/02/27</td>
+                    <td>$103,500</td>
+                </tr>
+                <tr>
+                    <td>Jonas Alexander</td>
+                    <td>Developer</td>
+                    <td>San Francisco</td>
+                    <td>30</td>
+                    <td>2010/07/14</td>
+                    <td>$86,500</td>
+                </tr>
+                <tr>
+                    <td>Shad Decker</td>
+                    <td>Regional Director</td>
+                    <td>Edinburgh</td>
+                    <td>51</td>
+                    <td>2008/11/13</td>
+                    <td>$183,000</td>
+                </tr>
+                <tr>
+                    <td>Michael Bruce</td>
+                    <td>Javascript Developer</td>
+                    <td>Singapore</td>
+                    <td>29</td>
+                    <td>2011/06/27</td>
+                    <td>$183,000</td>
+                </tr>
+                <tr>
+                    <td>Donna Snider</td>
+                    <td>Customer Support</td>
+                    <td>New York</td>
+                    <td>27</td>
+                    <td>2011/01/25</td>
+                    <td>$112,000</td>
+                </tr>
+                </tbody>
+            </table>
+        </main>
     </div>
-</footer>
- 
-<script src="js/jquery-3.2.1.slim.min.js"></script>
-<script src="js/jquery.min.js"></script>
+</div>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="js/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script>window.jQuery || document.write('<script src="../../../../assets/js/vendor/jquery-slim.min.js"><\/script>')</script>
 <script src="js/popper.min.js"></script>
 <script src="js/bootstrap.min.js"></script>
-<script src="js/bootstrap-datepicker.min.js"></script>
-<script src="js/savy.js"></script>
+<script src="js/jquery.dataTables.min.js"></script>
+<script src="js/dataTables.bootstrap4.min.js"></script>
 <script>
-        $(window).on("load", function () {
-            $(".loader-container").fadeOut(2000);
-        });
-    </script>
-<script>
-
-    $(document).ready(function () {
-        $('#wedding_date').datepicker();
-    <?php
-        if($count == 0) {
-    ?>
-        $('#user_firstname').savy('load');
-        $('#user_lastname').savy('load');
-        $('#user_email').savy('load');
-        $('#user_phone').savy('load');
-        $('#wedding_date').savy('load');
-    <?php } else { ?>
-        $('#user_firstname').savy('destroy');
-        $('#user_email').savy('destroy');
-        $('#user_lastname').savy('destroy');
-        $('#user_phone').savy('destroy');
-        $('#wedding_date').savy('destroy');
-    <?php } ?>
-    });
+    $(document).ready(function() {
+        $('#example').DataTable();
+    } );
 </script>
-<script>
-  let slideIndex = 0;
-showSlides();
-
-function showSlides() {
-  let i;
-  let slides = document.getElementsByClassName("mySlides");
-  let dots = document.getElementsByClassName("dot");
-  for (i = 0; i < slides.length; i++) {
-    slides[i].style.display = "none";  
-  }
-  slideIndex++;
-  if (slideIndex > slides.length) {slideIndex = 1}    
-  for (i = 0; i < dots.length; i++) {
-    dots[i].className = dots[i].className.replace(" active", "");
-  }
-  slides[slideIndex-1].style.display = "block";  
-  dots[slideIndex-1].className += " active";
-  setTimeout(showSlides, 2000); // Change image every 2 seconds
-}
-</script>
-<script type="text/javascript" src="validationfunction.js"></script>
-
-
-
 </body>
 </html>

@@ -62,14 +62,5 @@ class dataclass
 
         return $result;
     }
- 
-public function counter($query)
-{
-    $count=0;
-    $tb=mysqli_query($this->conn,$query);
-    $rw=mysqli_fetch_array($tb);
-    $count=$rw[0];
-    return $count;
-}
 }
 ?>

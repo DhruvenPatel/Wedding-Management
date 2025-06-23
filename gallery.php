@@ -1,158 +1,148 @@
-<?php 
-    include 'admin/include/init.php'; 
+<?php include 'include/init.php'; ?>
 
-    $gallery = Gallery::find_all(); 
+<?php
+     if (!isset($_SESSION['id'])) { redirect_to("../");}
 
+     // $booking_id = $_GET['booking_id'];
+     // $user_id = $_GET['user_id'];
+     // $links='booking_id='.$booking_id.'&user_id='.$user_id;
+     // $guest_list =  Guest::getGuest($booking_id);
+     $category = Category::find_all(); 
+     $features = Features::getAllfeatures(); 
 ?>
+<?php $users_profile = Users::find_by_id($_SESSION['id']); ?>
 <!doctype html>
 <html lang="en">
 <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>BANDHAN</title>
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Roboto" rel="stylesheet">
+    <title>Services And Modules - Administrator</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/dataTables.bootstrap4.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css"
           href="https://cdn.materialdesignicons.com/2.1.19/css/materialdesignicons.min.css">
-    <link rel="stylesheet" href="css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="lightbox/css/lightbox.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" rel="stylesheet">
     <style>
-        .loader-container {
-            width: 100vw;
-            height: 110vh;
-            background-color: black;
-            position: fixed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
+        table.table.table-striped.table-bordered.table-sm {
+            font-size:12px;
+        }
+        .tooltip {
+            font-size: 12px;
         }
 
-
-        body {
-            font-family: 'Open Sans', 'Roboto', sans-serif;
-            line-height: 1.5em;
-            margin-bottom: 2%;
-            margin-top: 2%;
-            width: 100%;
-            overflow-x: hidden;
-            background: #f1f1f1;
+        td.special {
+            /*padding: 0;*/
+            padding-top: 10px;
+            /*padding-left:6px;*/
+            /*padding-bottom:6px;*/
+            /*margin-top:5px;*/
+            text-transform: capitalize;
+        }
+       
+        div.dataTables_wrapper div.dataTables_paginate {
+            font-size: 11px;
         }
 
-        .navbar-light .navbar-brand {
-            color: #1a1a1a;
-            font-weight: bold;
-            line-height: 22px;
+        /* SuperBox */
+        .superbox-list {
+            display:inline-block;
+            *display:inline;
+            zoom:1;
+            width:12.5%;
         }
-
-        .navbar {
-            font-weight: 700;
-            padding: 12px;
-            font-style: normal;
-            font-size: 14px;
-            text-transform: uppercase;
-            color: black;
-            border-bottom: 1px solid #ddd;
+        .superbox-img {
+            max-width:100%;
+            width:100%;
+            cursor:pointer;
         }
-
-        li.nav-item > a.nav-link {
-            color: black !important;
-            font-weight: bold !important;
+        .superbox-show {
+            text-align:center;
+            position:relative;
+            background:#333;
+            box-shadow:inset 0 1px 5px #111;
+            -webkit-box-shadow:inset 0 1px 5px #111;
+            -moz-box-shadow:inset 0 1px 5px #111;
+            width:100%;
+            float:left;
+            padding:25px;
+            display:none;
         }
-
-        #review {
-            font-size: 16px;
-            font-weight: bold;
-            margin-right: 5px;
+        .superbox-current-img {
+            max-width:100%;
+            box-shadow:0 1px 4px #222;
+            border:1px solid #222;
         }
-
-        .form-inline > a.mr-2, .btn.btn-sm.my-2.my-sm-0 {
-            color: black;
-            font-size: 14px;
-            font-weight: 700;
-            margin-left: 10px;
+        .superbox-img:hover {
+            opacity:0.8;
         }
-
-        .form-inline > a.mr-2:hover, .btn.btn-sm.my-2.my-sm-0:hover {
-            color: #17b4bc;
-            text-decoration: none;
+        .superbox-float {
+            float:left;
         }
-
-        a.btn.btn-sm.my-2.my-sm-0.mr-2.loginbtn {
-            background: #dc3545;
-            font-size: 14px;
-            color: white;
-            padding: 5px;
-            border: 2px solid transparent;
-            width: 85px;
+        .superbox-close {
+            opacity:0.7;
+            cursor:pointer;
+            position:absolute;
+            top:25px;
+            right:25px;
+            background:url(../img/close.gif) no-repeat center center;
+            width:35px;
+            height:35px;
         }
-
-        a.btn.btn-sm.my-2.my-sm-0.mr-2.loginbtn:hover {
-            background: white;
-            border: 2px solid #dc3545;
-            color: #dc3545;
+        .superbox-close:hover {
+            opacity:1;
         }
-
-        .navbar-expand-lg .navbar-nav .nav-link {
-            padding-right: .9rem;
+        @media only screen and (min-width: 320px) {
+            .superbox-list {
+                width:50%;
+            }
         }
-
-        .navbar-brand {
-            margin-left: 20px;
-            width: 200px;
+        @media only screen and (min-width: 486px) {
+            .superbox-list {
+                width:25%;
+            }
         }
-        .card {
-            -webkit-border-radius:0;
-            -moz-border-radius:0;
-            border-radius:0;
+        @media only screen and (min-width: 768px) {
+            .superbox-list {
+                width:16.66666667%;
+            }
         }
-        .card img {
-            -webkit-border-radius:0;
-            -moz-border-radius:0;
-            border-radius:0;
+        @media only screen and (min-width: 1025px) {
+            .superbox-list {
+                width:12.5%;
+            }
         }
 
     </style>
 </head>
+
 <body>
-<?php include 'include/nav.php'; ?>
-<div class="loader-container">
-        <img src="images/loader1.gif" alt="img not found   ">
-    </div>
+
+<?php include_once 'include/sidebar.php'; ?>
 
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-lg-12">
-            <h4 class="text-center mb-0 mt-5">Wedding Photos</h4>
-            <p class="text-center mt-0 text-muted">Photos That Capture Your Moment</p>
-
-            <div class="card-columns">
-                <?php foreach($gallery as $galleries) : ?>
-                <div class="card" style="position: relative;">
-                    <a href="admin/<?= $galleries->picture_path(); ?>" data-lightbox="gallery-group-4">
-                        <img class="card-img-top" src="admin/<?= $galleries->picture_path(); ?>" alt="Card image cap">
-                    </a>
-                    <div class="card-body" style="position: absolute;bottom: 0;left:0; width: 100%;background: rgba(0,0,0, 0.5);color:white;padding: 10px 10px 0 10px;">
-                        <p class="card-title text-capitalize" style="font-size:12px;"><?= empty($galleries->title) ? 'No Title' : $galleries->title; ?></p>
-                    </div>
-                </div><!-- end of body -->
-                <?php endforeach; ?>
-            </div><!-- end of card columns -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h4 class="h4 mt-4">All Albums</h4>
+     <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group mr-2">
+            <a class="btn btn-sm btn-light mr-2" style="font-size: 12px;" href="package_add.php"><i class="mdi mdi-account-plus mr-2"></i> New Package</a>
         </div>
     </div>
+</div>
+<?php
+    if ($session->message()) { 
+        echo $session->message();
+    }
+?>
+
+    <div class="col-md-12">
+     
+    </div><!-- end of col-md-6 -->
+    <div class="col-md-12 mt-4">
+       
+       
+    </div><!-- end of col-md-12 -->
  
-<script src="js/jquery-3.2.1.slim.min.js"></script>
-<script src="js/jquery.min.js"></script>
-<script src="js/popper.min.js"></script>
-<script src="js/bootstrap.min.js"></script>
-<script src="lightbox/js/lightbox-2.6.min.js"></script>
-<script type="text/javascript" src="validationfunction.js"></script>
-<script>
-        $(window).on("load", function () {
-            $(".loader-container").fadeOut(2000);
-        });
-    </script>
-</body>
-</html>
+
+
+<?php include_once 'include/footer.php';?>
