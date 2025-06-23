@@ -1,1 +1,1 @@
-# Wedding-Mnagement
+# Wedding-Management
